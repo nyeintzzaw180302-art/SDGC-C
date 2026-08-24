@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Goals Sprint — SDG Quiz</title>
+<style>
+  :root{
+    --bg:#081A36;
+    --bg2:#0D2447;
+    --card:#0F2C56;
+    --card-line:#20406F;
+    --ink:#F3F7FC;
+    --muted:#9FB4D6;
+    --a:#E5243B;
+    --b:#FD9D24;
+    --c:#4C9F38;
+    --d:#26BDE2;
+    --gold:#FFC72C;
+    --radius:20px;
+    --font-display:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 12% -10%, #163561 0%, transparent 45%),
+      radial-gradient(circle at 100% 0%, #0E2A52 0%, transparent 40%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:28px 16px 40px;
+  }
+  h1,h2,h3{font-family:var(--font-display); margin:0;}
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    font-weight:700;
+  }
+  .wrap{width:100%; max-width:480px;}
+  /* ---- Goals trail (signature progress element) ---- */
+  .trail{
+    display:flex;
+    gap:6px;
+    width:100%;
+    max-width:480px;
+    margin:0 0 22px;
+  }
+  .trail .seg{
+    flex:1;
+    height:8px;
+    border-radius:5px;
+    background:#1B3A66;
+    overflow:hidden;
+    position:relative;
+  }
+  .trail .seg.done{ background:var(--seg-color, var(--gold)); box-shadow:0 0 10px var(--seg-color, var(--gold)); }
+  .trail .seg.wrong{ background:#5A2230; box-shadow:0 0 8px #5A2230; }
+  .trail .seg.current::after{
+    content:'';
+    position:absolute; inset:0;
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+    animation:sweep 1.3s linear infinite;
+  }
+  @keyframes sweep{ from{transform:translateX(-100%);} to{transform:translateX(100%);} }
+
+  /* ---- Join screen ---- */
+  .badge{
+    width:64px;height:64px;border-radius:16px;
+    background:conic-gradient(from 0deg, var(--a), var(--b), var(--c), var(--d), var(--a));
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:700;font-size:22px;color:var(--bg);
+    margin-bottom:18px;
+    box-shadow:0 8px 30px rgba(38,189,226,.25);
+  }
+  .title{font-size:34px; line-height:1.05; font-weight:700; letter-spacing:-0.02em;}
+  .sub{color:var(--muted); font-size:15px; margin-top:10px; line-height:1.5;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:var(--radius);
+    padding:22px;
+    width:100%;
+  }
+  input[type=text]{
+    width:100%;
+    background:#0A2144;
+    border:1.5px solid var(--card-line);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:17px;
+    font-weight:600;
+    padding:16px 16px;
+    border-radius:14px;
+    outline:none;
+    margin-top:6px;
+  }
+  input[type=text]:focus{border-color:var(--d);}
+  input[type=text]::placeholder{color:#5D7BA8; font-weight:500;}
+  label{font-size:13px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em;}
+  .btn{
+    appearance:none;
+    border:none;
+    cursor:pointer;
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:16px;
+    border-radius:14px;
+    padding:16px 20px;
+    width:100%;
+    transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:linear-gradient(135deg, var(--d), #1C93B0); color:#04151F; margin-top:16px; }
+  .btn-primary:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-ghost{ background:transparent; color:var(--muted); border:1px solid var(--card-line); }
+  .link-row{ margin-top:22px; text-align:center; }
+  .link-row a{ color:var(--muted); font-size:13px; text-decoration:underline; cursor:pointer; }
+
+  /* ---- Question screen ---- */
+  .qtop{ width:100%; display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .qcount{ font-family:var(--font-mono); font-size:13px; color:var(--muted); font-weight:700; }
+  .timer{
+    width:42px; height:42px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:700; font-size:15px;
+    background:#0A2144; border:2px solid var(--gold); color:var(--gold);
+  }
+  .timer.low{ border-color:var(--a); color:var(--a); }
+  .qcard{
+    background:var(--card);
+    border:1px solid var(--card-line);
+    border-radius:var(--radius);
+    padding:26px 22px;
+    width:100%;
+    margin-bottom:16px;
+  }
+  .qtext{ font-size:21px; font-weight:700; line-height:1.35; font-family:var(--font-display); }
+  .options{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    width:100%;
+  }
+  .opt{
+    min-height:96px;
+    border-radius:16px;
+    border:none;
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+    font-family:var(--font-body);
+    padding:14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    text-align:left;
+    cursor:pointer;
+    line-height:1.25;
+    box-shadow:0 6px 0 rgba(0,0,0,.18);
+    transition:transform .1s ease, box-shadow .1s ease, filter .15s ease;
+  }
+  .opt:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.18); }
+  .opt .k{
+    font-family:var(--font-mono); font-weight:700; font-size:13px;
+    width:24px; height:24px; border-radius:7px; background:rgba(255,255,255,.22);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .opt-a{ background:var(--a); }
+  .opt-b{ background:var(--b); color:#2B1B00; }
+  .opt-b .k{ background:rgba(0,0,0,.16); }
+  .opt-c{ background:var(--c); }
+  .opt-d{ background:var(--d); color:#04222B; }
+  .opt-d .k{ background:rgba(0,0,0,.16); }
+  .opt.disabled{ pointer-events:none; }
+  .opt.dim{ opacity:.35; filter:grayscale(40%); }
+  .opt.correct{ outline:3px solid #fff; box-shadow:0 0 0 4px rgba(76,159,56,.4); }
+  .opt.incorrect{ outline:3px solid #fff; opacity:.55; }
+
+  .feedback{
+    margin-top:14px; text-align:center; font-family:var(--font-mono);
+    font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    min-height:18px;
+  }
+  .feedback.good{ color:var(--c); }
+  .feedback.bad{ color:var(--a); }
+
+  /* ---- Finish / leaderboard ---- */
+  .score-hero{ text-align:center; padding:10px 0 20px; }
+  .score-num{ font-family:var(--font-display); font-size:56px; font-weight:700; color:var(--gold); }
+  .lb-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px; border-radius:12px; margin-bottom:8px;
+    background:#0A2144; border:1px solid var(--card-line);
+  }
+  .lb-row.me{ border-color:var(--gold); background:#20360A22; }
+  .lb-rank{ font-family:var(--font-mono); font-weight:700; color:var(--muted); width:26px; }
+  .lb-rank.top1{ color:var(--gold); } .lb-rank.top2{ color:#C9D6E8; } .lb-rank.top3{ color:#E3A15C; }
+  .lb-name{ flex:1; font-weight:700; font-size:15px; }
+  .lb-score{ font-family:var(--font-mono); font-weight:700; color:var(--gold); }
+
+  /* ---- Host screen ---- */
+  .host-grid{ display:flex; flex-direction:column; gap:18px; width:100%; }
+  #qrbox{ background:#fff; padding:16px; border-radius:16px; display:flex; align-items:center; justify-content:center; }
+  .host-hint{ color:var(--muted); font-size:13px; line-height:1.5; }
+  .small-input{ font-size:13px; padding:12px; }
+  .pulse-dot{ width:8px;height:8px;border-radius:50%; background:var(--c); display:inline-block; margin-right:6px; animation:pulse 1.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+  @media (max-width:360px){
+    .title{font-size:28px;}
+    .qtext{font-size:19px;}
+    .opt{min-height:84px; font-size:14px;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { getDatabase, ref, set, get, remove } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDoo81hPN32ql8eG7qmAv9-vtNSA4I8c6M",
+  authDomain: "sdg-live-quiz.firebaseapp.com",
+  databaseURL: "https://sdg-live-quiz-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sdg-live-quiz",
+  storageBucket: "sdg-live-quiz.firebasestorage.app",
+  messagingSenderId: "96882101884",
+  appId: "1:96882101884:web:bd48ce2c43f84adc7a43f9"
+};
+
+const ready = !firebaseConfig.apiKey.startsWith("PASTE_") &&
+              !firebaseConfig.projectId.startsWith("PASTE_") &&
+              !firebaseConfig.databaseURL.includes("PASTE_");
+
+if (ready) {
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const pathFor = k => k.replace(/:/g, "/");
+
+  window.liveDB = {
+    ready: true,
+    async set(key, value){ await set(ref(db, pathFor(key)), value); },
+    async get(key){ const s = await get(ref(db, pathFor(key))); return s.exists() ? s.val() : null; },
+    async remove(key){ await remove(ref(db, pathFor(key))); },
+    async list(prefix){
+      const s = await get(ref(db, pathFor(prefix)));
+      if(!s.exists()) return [];
+      return Object.keys(s.val() || {}).map(id => `${prefix}${id}`);
+    }
+  };
+} else {
+  window.liveDB = { ready:false };
+}
+</script>
+
+<script>
+/* ============ QUESTION DATA ============
+   Only 12 questions were provided for this 15-question format.
+   To reach 15, add more objects to this array in the same shape —
+   everything else (progress trail, scoring, leaderboard) adapts automatically. */
+const QUESTIONS = [
+  { q:"How many years remain to achieve the SDGs as of 2026?", options:["2 years","4 years","6 years","10 years"], correct:1 },
+  { q:"Which SDG directly addresses reducing inequality within and among countries?", options:["SDG 5 – Gender Equality","SDG 8 – Decent Work and Economic Growth","SDG 10 – Reduced Inequalities","SDG 16 – Peace, Justice and Strong Institutions"], correct:2 },
+  { q:"Which renewable energy source is currently the fastest-growing globally?", options:["Hydropower","Geothermal energy","Solar energy","Biomass"], correct:2 },
+  { q:"Which sector contributes the most to global food waste?", options:["Retail","Food service","Households","Agriculture"], correct:2 },
+  { q:"What does SDG 11 primarily focus on?", options:["Affordable and Clean Energy","Sustainable Cities and Communities","Climate Action","Industry, Innovation and Infrastructure"], correct:1 },
+  { q:"Which industry is responsible for the highest share of global plastic pollution?", options:["Construction","Electronics","Packaging","Automotive"], correct:2 },
+  { q:"Which challenge most undermines progress on SDG 1?", options:["Growth in renewable energy","Increased urbanization","Persistent inequality and vulnerability to economic shocks","Expansion of international tourism"], correct:2 },
+  { q:"Which SDG focuses on responsible consumption and production?", options:["SDG 8","SDG 10","SDG 12","SDG 14"], correct:2 },
+  { q:"Which option is highest in the commonly used waste hierarchy?", options:["Recycling","Energy recovery","Prevention","Disposal"], correct:2 },
+  { q:"Which SDG focuses specifically on protecting, restoring, and sustainably using terrestrial ecosystems?", options:["SDG 13","SDG 14","SDG 15","SDG 16"], correct:2 },
+  { q:"Which action is considered most effective for individuals to reduce their carbon footprint?", options:["Using reusable shopping bags","Reducing high-emission transportation and consumption","Turning off the tap while brushing teeth","Recycling paper"], correct:1 },
+  { q:"What is a key indicator of progress under SDG 3?", options:["Forest coverage","Maternal mortality rate","Renewable energy share","Recycling rate"], correct:1 },
+];
+
+const QUESTION_TIME = 15; // seconds per question
+const OPT_CLASSES = ["opt-a","opt-b","opt-c","opt-d"];
+const OPT_KEYS = ["A","B","C","D"];
+
+let state = {
+  screen: (new URLSearchParams(location.search).get('host') === '1') ? 'host' : 'join',
+  name: "",
+  playerId: null,
+  roundId: null,
+  qIndex: 0,
+  results: [], // {correct:bool, points:number}
+  score: 0,
+  timeLeft: QUESTION_TIME,
+  timerHandle: null,
+  answered: false,
+};
+
+const app = document.getElementById('app');
+
+function uid(){
+  return (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+"-"+Math.random().toString(16).slice(2)));
+}
+
+function storageAvailable(){
+  return typeof window !== 'undefined' && window.liveDB && window.liveDB.ready;
+}
+
+const NO_STORAGE_MSG = "Firebase is not connected yet. Add your Firebase Web App configuration to index.html first.";
+
+function trailHTML(){
+  const colors = [ "var(--a)","var(--b)","var(--c)","var(--d)" ];
+  let segs = "";
+  for(let i=0;i<QUESTIONS.length;i++){
+    let cls = "seg";
+    let style = "";
+    if(i < state.results.length){
+      cls += state.results[i].correct ? " done" : " wrong";
+      style = `style="--seg-color:${colors[i%4]}"`;
+    } else if(i === state.qIndex && state.screen==='question'){
+      cls += " current";
+    }
+    segs += `<div class="${cls}" ${style}></div>`;
+  }
+  return `<div class="trail">${segs}</div>`;
+}
+
+/* ---------------- JOIN SCREEN ---------------- */
+function renderJoin(){
+  app.innerHTML = `
+    <div class="wrap">
+      <div class="badge">SDG</div>
+      <div class="eyebrow">Goals Sprint · Live Quiz</div>
+      <h1 class="title">How well do you<br>know the Goals?</h1>
+      <p class="sub">${QUESTIONS.length} quick questions. Fastest correct answers score the most. Enter your name and jump in.</p>
+      <div class="card" style="margin-top:22px;">
+        <label>Your name</label>
+        <input type="text" id="nameInput" maxlength="24" placeholder="e.g. Alex" autocomplete="off">
+        <button class="btn btn-primary" id="startBtn">Start playing</button>
+      </div>
+      <div class="link-row"><a id="hostLink">Host / big-screen view →</a></div>
+    </div>
+  `;
+  const input = document.getElementById('nameInput');
+  const startBtn = document.getElementById('startBtn');
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') startBtn.click(); });
+  startBtn.addEventListener('click', async () => {
+    const val = input.value.trim();
+    if(!val){ input.focus(); input.style.borderColor = 'var(--a)'; return; }
+    state.name = val.slice(0,24);
+    state.playerId = uid();
+    state.qIndex = 0;
+    state.results = [];
+    state.score = 0;
+    startBtn.disabled = true;
+    startBtn.textContent = 'Joining…';
+    if(!storageAvailable()){
+      alert(NO_STORAGE_MSG);
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start playing';
+      return;
+    }
+    try{
+      let session = await window.liveDB.get('game:session');
+      if(!session || !session.roundId){
+        session = {status:'lobby', roundId:uid(), createdAt:Date.now()};
+        await window.liveDB.set('game:session', session);
+      }
+      state.roundId = session.roundId;
+      await window.liveDB.set(`rounds:${state.roundId}:lobby:${state.playerId}`, {
+        name: state.name,
+        joinedAt: Date.now()
+      });
+    }catch(e){
+      console.error('lobby join failed', e);
+      alert("Couldn't join the lobby — check your connection and try again.");
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start playing';
+      return;
+    }
+    state.screen = 'lobby';
+    render();
+  });
+  document.getElementById('hostLink').addEventListener('click', () => {
+    state.screen = 'host';
+    render();
+  });
+}
+
+/* ---------------- LOBBY (waiting for host to start) ---------------- */
+let lobbyPollHandle = null;
+
+function renderLobby(){
+  clearInterval(lobbyPollHandle);
+  app.innerHTML = `
+    <div class="wrap">
+      <div class="badge">SDG</div>
+      <div class="eyebrow">You're in, ${escapeHTML(state.name)}</div>
+      <h1 class="title" style="font-size:28px;">Waiting for the host<br>to start the game…</h1>
+      <p class="sub" id="waitingCount">Checking who else is here…</p>
+      <div class="card" style="margin-top:22px; text-align:center;">
+        <span class="pulse-dot"></span><span style="color:var(--muted); font-size:14px;">Stay on this page — Question 1 will appear automatically for everyone at once.</span>
+      </div>
+    </div>
+  `;
+  checkLobby();
+  lobbyPollHandle = setInterval(checkLobby, 1200);
+}
+
+async function checkLobby(){
+  const countEl = document.getElementById('waitingCount');
+  if(countEl){
+    try{
+      const keys = await window.liveDB.list(`rounds:${state.roundId}:lobby:`);
+      const n = keys ? keys.length : 1;
+      countEl.textContent = `${n} player${n===1?'':'s'} waiting in the lobby.`;
+    }catch(e){ /* ignore */ }
+  }
+  try{
+    const session = await window.liveDB.get('game:session');
+    if(session && session.roundId && session.roundId !== state.roundId){
+      clearInterval(lobbyPollHandle);
+      alert('A new round has started. Please rejoin the game.');
+      state = {...state, screen:'join', name:"", playerId:null, roundId:null, qIndex:0, results:[], score:0};
+      render();
+      return;
+    }
+    if(session && session.status === 'started' && session.roundId === state.roundId){
+      clearInterval(lobbyPollHandle);
+      state.screen = 'question';
+      render();
+    }
+  }catch(e){
+    // no session key yet -> host hasn't started, keep waiting
+  }
+}
+
+/* ---------------- QUESTION SCREEN ---------------- */
+function renderQuestion(){
+  const idx = state.qIndex;
+  const q = QUESTIONS[idx];
+  state.timeLeft = QUESTION_TIME;
+  state.answered = false;
+
+  app.innerHTML = `
+    <div class="wrap">
+      ${trailHTML()}
+      <div class="qtop">
+        <span class="qcount">QUESTION ${idx+1} / ${QUESTIONS.length}</span>
+        <div class="timer" id="timerEl">${state.timeLeft}</div>
+      </div>
+      <div class="qcard">
+        <div class="qtext">${q.q}</div>
+      </div>
+      <div class="options" id="optionsEl">
+        ${q.options.map((o,i)=>`
+          <button class="opt ${OPT_CLASSES[i]}" data-i="${i}">
+            <span class="k">${OPT_KEYS[i]}</span><span>${o}</span>
+          </button>`).join('')}
+      </div>
+      <div class="feedback" id="feedbackEl"></div>
+    </div>
+  `;
+
+  document.querySelectorAll('.opt').forEach(btn=>{
+    btn.addEventListener('click', ()=> lockAnswer(parseInt(btn.dataset.i,10)));
+  });
+
+  const timerEl = document.getElementById('timerEl');
+  clearInterval(state.timerHandle);
+  state.timerHandle = setInterval(()=>{
+    state.timeLeft -= 1;
+    if(state.timeLeft <= 5) timerEl.classList.add('low');
+    timerEl.textContent = Math.max(state.timeLeft,0);
+    if(state.timeLeft <= 0){
+      clearInterval(state.timerHandle);
+      if(!state.answered) lockAnswer(-1); // time's up, no answer
+    }
+  },1000);
+}
+
+function lockAnswer(choiceIdx){
+  if(state.answered) return;
+  state.answered = true;
+  clearInterval(state.timerHandle);
+
+  const q = QUESTIONS[state.qIndex];
+  const correctIdx = q.correct;
+  const isCorrect = choiceIdx === correctIdx;
+  let points = 0;
+  if(isCorrect){
+    points = 500 + Math.round(500 * (state.timeLeft / QUESTION_TIME));
+  }
+  state.score += points;
+  state.results.push({correct:isCorrect, points});
+
+  document.querySelectorAll('.opt').forEach(btn=>{
+    const i = parseInt(btn.dataset.i,10);
+    btn.classList.add('disabled');
+    if(i === correctIdx) btn.classList.add('correct');
+    else if(i === choiceIdx) btn.classList.add('incorrect');
+    else btn.classList.add('dim');
+  });
+
+  const fb = document.getElementById('feedbackEl');
+  if(choiceIdx === -1){
+    fb.textContent = "Time's up";
+    fb.className = "feedback bad";
+  } else if(isCorrect){
+    fb.textContent = `Correct · +${points} pts`;
+    fb.className = "feedback good";
+  } else {
+    fb.textContent = "Not quite";
+    fb.className = "feedback bad";
+  }
+
+  setTimeout(()=>{
+    if(state.qIndex < QUESTIONS.length - 1){
+      state.qIndex += 1;
+      renderQuestion();
+    } else {
+      state.screen = 'finish';
+      render();
+    }
+  }, 1300);
+}
+
+/* ---------------- FINISH / LEADERBOARD ---------------- */
+async function renderFinish(){
+  const correctCount = state.results.filter(r=>r.correct).length;
+
+  app.innerHTML = `
+    <div class="wrap">
+      ${trailHTML()}
+      <div class="score-hero">
+        <div class="eyebrow">${escapeHTML(state.name)}, you scored</div>
+        <div class="score-num">${state.score}</div>
+        <div class="sub">${correctCount} / ${QUESTIONS.length} correct</div>
+      </div>
+
+      <div class="card" style="text-align:center;">
+        <h3 style="font-size:18px; margin-bottom:10px;">Your result has been submitted ✓</h3>
+        <p class="sub" style="margin:0;">The final leaderboard is shown on the host screen only.</p>
+      </div>
+
+      <div class="link-row"><a id="playAgain">Return to join screen →</a></div>
+    </div>
+  `;
+
+  document.getElementById('playAgain').addEventListener('click', ()=>{
+    state = {...state, screen:'join', name:"", playerId:null, roundId:null, qIndex:0, results:[], score:0};
+    render();
+  });
+
+  try{
+    if(state.roundId){
+      await window.liveDB.set(`rounds:${state.roundId}:players:${state.playerId}`, {
+        name: state.name,
+        score: state.score,
+        correct: correctCount,
+        finishedAt: Date.now()
+      });
+    }
+  }catch(e){
+    console.error('submit failed', e);
+  }
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------------- HOST SCREEN ---------------- */
+let hostPollHandle = null;
+
+function renderHost(){
+  clearInterval(hostPollHandle);
+  const defaultUrl = location.href.split('?')[0];
+  app.innerHTML = `
+    <div class="wrap" style="max-width:560px;">
+      <div class="eyebrow">Host view</div>
+      <h1 class="title" style="font-size:26px;">Goals Sprint</h1>
+      <p class="sub">Share this link (or its QR code) so players can join on their phones. Only the host can see the live leaderboard. Each reset creates a completely new round.</p>
+      <div class="host-grid">
+        <div class="card">
+          <label>Link players will open</label>
+          <input type="text" id="urlInput" class="small-input" value="${escapeHTML(defaultUrl)}">
+          <button class="btn btn-primary" id="genQrBtn">Generate QR code</button>
+          <div id="qrbox" style="margin-top:16px; display:none;"></div>
+          <p class="host-hint" style="margin-top:10px;">Tip: publish/share this artifact first, then paste the resulting link above.</p>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px; margin-bottom:10px;">Game controls</h3>
+          <p class="host-hint" id="sessionStatus">Checking status…</p>
+          <button class="btn btn-primary" id="startGameBtn">Start game for everyone</button>
+          <button class="btn btn-ghost" id="resetGameBtn" style="margin-top:10px;">Reset for a new round</button>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px; margin-bottom:12px;"><span class="pulse-dot"></span>Live leaderboard</h3>
+          <div id="lbListHost" style="color:var(--muted); font-size:14px;">Loading…</div>
+        </div>
+        <button class="btn btn-ghost" id="backBtn">← Back to join screen</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', ()=>{
+    clearInterval(hostPollHandle);
+    state.screen = 'join';
+    render();
+  });
+  document.getElementById('genQrBtn').addEventListener('click', ()=>{
+    const url = document.getElementById('urlInput').value.trim();
+    if(!url) return;
+    const box = document.getElementById('qrbox');
+    box.style.display = 'flex';
+    const qrImgUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&data=' + encodeURIComponent(url);
+    box.innerHTML = `<img src="${qrImgUrl}" alt="QR code to join the game" width="220" height="220" style="display:block;" onerror="this.parentElement.innerHTML='Could not load QR image — check your connection.'">`;
+  });
+  document.getElementById('startGameBtn').addEventListener('click', async ()=>{
+    const btn = document.getElementById('startGameBtn');
+    const statusEl = document.getElementById('sessionStatus');
+    if(!storageAvailable()){
+      statusEl.textContent = NO_STORAGE_MSG;
+      statusEl.style.color = 'var(--a)';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+    statusEl.style.color = '';
+    statusEl.textContent = 'Starting the game…';
+    try{
+      let session = await window.liveDB.get('game:session');
+      if(!session || !session.roundId){
+        session = {status:'lobby', roundId:uid(), createdAt:Date.now()};
+      }
+      session.status = 'started';
+      session.startedAt = Date.now();
+      await window.liveDB.set('game:session', session);
+      await loadHostStatus();
+    }catch(e){
+      console.error('start failed', e);
+      statusEl.textContent = 'Could not start the game — check your connection and try again.';
+      statusEl.style.color = 'var(--a)';
+      btn.disabled = false;
+      btn.textContent = 'Start game for everyone';
+    }
+  });
+  document.getElementById('resetGameBtn').addEventListener('click', async ()=>{
+    const statusEl = document.getElementById('sessionStatus');
+    if(!storageAvailable()){
+      statusEl.textContent = NO_STORAGE_MSG;
+      statusEl.style.color = 'var(--a)';
+      return;
+    }
+    if(!confirm('This ends the current round and creates a fresh leaderboard for a new round. Continue?')) return;
+    try{
+      await window.liveDB.set('game:session', {status:'lobby'});
+      const lobbyKeys = await window.liveDB.list('lobby:');
+      if(lobbyKeys && lobbyKeys.keys) for(const k of lobbyKeys.keys){ try{ await window.liveDB.remove(k); }catch(e){} }
+      const playerKeys = await window.liveDB.list('players:');
+      if(playerKeys && playerKeys.keys) for(const k of playerKeys.keys){ try{ await window.liveDB.remove(k); }catch(e){} }
+      await loadHostStatus();
+      await loadHostLeaderboard();
+    }catch(e){
+      console.error('reset failed', e);
+      statusEl.textContent = 'Reset failed — check your connection and try again.';
+      statusEl.style.color = 'var(--a)';
+    }
+  });
+
+  loadHostStatus();
+  loadHostLeaderboard();
+  hostPollHandle = setInterval(()=>{ loadHostStatus(); loadHostLeaderboard(); }, 3000);
+}
+
+async function loadHostStatus(){
+  const statusEl = document.getElementById('sessionStatus');
+  const btn = document.getElementById('startGameBtn');
+  if(!statusEl || !btn) return;
+  if(!storageAvailable()){
+    statusEl.textContent = NO_STORAGE_MSG;
+    statusEl.style.color = 'var(--a)';
+    btn.disabled = true;
+    return;
+  }
+  try{
+    let session = await window.liveDB.get('game:session');
+    if(!session || !session.roundId){
+      session = {status:'lobby', roundId:uid(), createdAt:Date.now()};
+      await window.liveDB.set('game:session', session);
+    }
+    statusEl.style.color = '';
+    if(session && session.status === 'started'){
+      statusEl.textContent = `Game started — current round is active.`;
+      btn.disabled = true;
+      btn.textContent = 'Game already started';
+    } else {
+      statusEl.textContent = 'Lobby open — players are waiting to start.';
+      btn.disabled = false;
+      btn.textContent = 'Start game for everyone';
+    }
+  }catch(e){
+    statusEl.style.color = '';
+    statusEl.textContent = 'Lobby open — players are waiting to start.';
+    btn.disabled = false;
+    btn.textContent = 'Start game for everyone';
+  }
+}
+
+async function loadHostLeaderboard(){
+  const listEl = document.getElementById('lbListHost');
+  if(!listEl) return;
+
+  try{
+    const session = await window.liveDB.get('game:session');
+    const roundId = session && session.roundId ? session.roundId : null;
+
+    if(!roundId){
+      listEl.innerHTML = `<div class="sub">No active round yet.</div>`;
+      return;
+    }
+
+    const keys = await window.liveDB.list(`rounds:${roundId}:players:`);
+    const entries = [];
+
+    if(keys){
+      for(const k of keys){
+        try{
+          const res = await window.liveDB.get(k);
+          if(res) entries.push(res);
+        }catch(e){}
+      }
+    }
+
+    entries.sort((a,b)=> b.score - a.score || b.correct - a.correct || a.finishedAt - b.finishedAt);
+    const top = entries.slice(0,10);
+
+    if(top.length === 0){
+      listEl.innerHTML = `<div class="sub">No finished players in this round yet.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = top.map((e,i)=>{
+      const rankClass = i===0?'top1':i===1?'top2':i===2?'top3':'';
+      return `<div class="lb-row">
+        <span class="lb-rank ${rankClass}">${i+1}</span>
+        <span class="lb-name">${escapeHTML(e.name)} <span style="color:var(--muted);font-size:12px;">(${e.correct}/${QUESTIONS.length})</span></span>
+        <span class="lb-score">${e.score}</span>
+      </div>`;
+    }).join('') + `<div class="sub" style="margin-top:8px;">${entries.length} finished player${entries.length===1?'':'s'} in this round</div>`;
+
+  }catch(e){
+    console.error('host leaderboard failed', e);
+    listEl.innerHTML = `<div class="sub">Couldn't load scores.</div>`;
+  }
+}
+
+/* ---------------- ROUTER ---------------- */
+function render(){
+  if(state.screen === 'join') renderJoin();
+  else if(state.screen === 'lobby') renderLobby();
+  else if(state.screen === 'question') renderQuestion();
+  else if(state.screen === 'finish') renderFinish();
+  else if(state.screen === 'host') renderHost();
+}
+
+render();
+</script>
+</body>
+</html>
